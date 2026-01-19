@@ -1,0 +1,151 @@
+<div class="board-container">
+  <div class="board-header">
+    <h1>Project Board</h1>
+
+    <div class="filter-controls">
+      <button 
+        *ngFor="let category of filterOptions" 
+        (click)="onFilterChange(category)"
+        [class.active]="selectedCategoryFilter === category"
+        class="filter-btn">
+        {{ getCategoryLabel(category) }}
+      </button>
+    </div>
+    <button class="btn-create" (click)="openCreateModal()">+ Create Ticket</button>
+  </div>
+
+  <!-- Error message -->
+  <div class="error-banner" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-spinner" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading tickets...</p>
+  </div>
+
+  <!-- Board columns -->
+  <div class="board-columns" *ngIf="!isLoading">
+    <!-- Backlog -->
+    <div class="column">
+      <div class="column-header">
+        <h2>Backlog</h2>
+        <span class="ticket-count">{{ backlog.length }}</span>
+      </div>
+      <div 
+        class="column-content"
+        cdkDropList
+        [cdkDropListData]="backlog"
+        [cdkDropListConnectedTo]="statusLists"
+        id="backlog"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        <div 
+          *ngFor="let ticket of backlog" 
+          cdkDrag
+          [cdkDragData]="ticket"
+          class="ticket-wrapper"
+        >
+          <app-ticket-card 
+            [ticket]="ticket"
+            (ticketClick)="openEditModal($event)"
+          ></app-ticket-card>
+        </div>
+      </div>
+    </div>
+
+    <!-- In Progress -->
+    <div class="column">
+      <div class="column-header">
+        <h2>In Progress</h2>
+        <span class="ticket-count">{{ inProgress.length }}</span>
+      </div>
+      <div 
+        class="column-content"
+        cdkDropList
+        [cdkDropListData]="inProgress"
+        [cdkDropListConnectedTo]="statusLists"
+        id="inProgress"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        <div 
+          *ngFor="let ticket of inProgress" 
+          cdkDrag
+          [cdkDragData]="ticket"
+          class="ticket-wrapper"
+        >
+          <app-ticket-card 
+            [ticket]="ticket"
+            (ticketClick)="openEditModal($event)"
+          ></app-ticket-card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review -->
+    <div class="column">
+      <div class="column-header">
+        <h2>Review</h2>
+        <span class="ticket-count">{{ review.length }}</span>
+      </div>
+      <div 
+        class="column-content"
+        cdkDropList
+        [cdkDropListData]="review"
+        [cdkDropListConnectedTo]="statusLists"
+        id="review"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        <div 
+          *ngFor="let ticket of review" 
+          cdkDrag
+          [cdkDragData]="ticket"
+          class="ticket-wrapper"
+        >
+          <app-ticket-card 
+            [ticket]="ticket"
+            (ticketClick)="openEditModal($event)"
+          ></app-ticket-card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Done -->
+    <div class="column">
+      <div class="column-header">
+        <h2>Done</h2>
+        <span class="ticket-count">{{ done.length }}</span>
+      </div>
+      <div 
+        class="column-content"
+        cdkDropList
+        [cdkDropListData]="done"
+        [cdkDropListConnectedTo]="statusLists"
+        id="done"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        <div 
+          *ngFor="let ticket of done" 
+          cdkDrag
+          [cdkDragData]="ticket"
+          class="ticket-wrapper"
+        >
+          <app-ticket-card 
+            [ticket]="ticket"
+            (ticketClick)="openEditModal($event)"
+          ></app-ticket-card>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <app-ticket-modal
+    [isOpen]="isModalOpen"
+    [ticket]="selectedTicket"
+    (close)="closeModal()"
+    (save)="onSaveTicket($event)"
+    (delete)="onDeleteTicket($event)"
+  ></app-ticket-modal>
+</div>

@@ -1,0 +1,12 @@
+<div class="ticket-card" [class]="getCategoryClass()" (click)="onClick()">
+  <div class="ticket-header">
+    <span class="ticket-category" [class]="getCategoryClass()">
+      {{ getCategoryLabel() }}
+    </span>
+  </div>
+  <div class="ticket-name">{{ ticket.name }}</div>
+  <div class="ticket-description" *ngIf="ticket.description">
+    {{ ticket.description }}
+  </div>
+  <div class="ticket-id">#{{ ticket.id }}</div>
+</div>
