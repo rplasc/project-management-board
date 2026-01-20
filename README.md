@@ -5,7 +5,7 @@ A full-stack Kanban board built with Angular 19 and .NET 10. This project demons
 
 ## Prerequisites
 
-* **.NET 10 SDK** (or relevant version)
+* **.NET 10 SDK**
 * **Node.js** (v22 or higher)
 * **Angular CLI** (Optional, can run via npm script)
 
