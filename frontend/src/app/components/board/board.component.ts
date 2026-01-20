@@ -1,15 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { TicketService } from '../../services/ticket.service';
 import { 
   Ticket, 
   TicketStatus,
-  TicketCategory, 
+  TicketCategory,
   CreateTicketDto, 
   UpdateTicketDto,
-  UpdateTicketStatusDto,
-  getCategoryDisplayName 
+  getCategoryDisplayName
 } from '../../models/ticket.model';
 import { TicketCardComponent } from '../ticket-card/ticket-card.component';
 import { TicketModalComponent } from '../ticket-modal/ticket-modal.component';
@@ -18,7 +18,8 @@ import { TicketModalComponent } from '../ticket-modal/ticket-modal.component';
   selector: 'app-board',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
+    FormsModule,
     DragDropModule, 
     TicketCardComponent, 
     TicketModalComponent
@@ -36,7 +37,7 @@ export class BoardComponent implements OnInit {
   // All tickets (unfiltered)
   allTickets: Ticket[] = [];
 
-   // Filter state
+  // Filter state
   selectedCategoryFilter: TicketCategory | 'All' = 'All';
   readonly filterOptions: Array<TicketCategory | 'All'> = ['All', 'Feature', 'Bug', 'RAndD'];
 
@@ -66,7 +67,7 @@ export class BoardComponent implements OnInit {
         this.isLoading = false;
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load tickets. Please try again.';
+        this.errorMessage = `Failed to load tickets: ${error.message}`;
         console.error('Load error:', error);
         this.isLoading = false;
       }
@@ -76,7 +77,7 @@ export class BoardComponent implements OnInit {
   applyFilter(): void {
     let filteredTickets = this.allTickets;
 
-    if (this.selectedCategoryFilter != 'All') {
+    if (this.selectedCategoryFilter !== 'All') {
       filteredTickets = this.allTickets.filter(
         t => t.category === this.selectedCategoryFilter
       );
@@ -85,7 +86,7 @@ export class BoardComponent implements OnInit {
     this.distributeTickets(filteredTickets);
   }
 
-    onFilterChange(category: TicketCategory | 'All'): void {
+  onFilterChange(category: TicketCategory | 'All'): void {
     this.selectedCategoryFilter = category;
     this.applyFilter();
   }
@@ -99,6 +100,13 @@ export class BoardComponent implements OnInit {
 
   onDrop(event: CdkDragDrop<Ticket[]>): void {
     const ticket = event.item.data;
+    
+    if (!ticket) {
+      console.error('No ticket data in drag event');
+      this.errorMessage = 'Failed to move ticket: Invalid ticket data';
+      return;
+    }
+
     const newStatus = this.getStatusFromContainerId(event.container.id);
 
     if (event.previousContainer === event.container) {
@@ -108,6 +116,7 @@ export class BoardComponent implements OnInit {
       // Different column (move and update status)
       const previousArray = event.previousContainer.data;
       const currentArray = event.container.data;
+      const oldStatus = ticket.status;
 
       transferArrayItem(
         previousArray,
@@ -115,6 +124,9 @@ export class BoardComponent implements OnInit {
         event.previousIndex,
         event.currentIndex
       );
+
+      // Updates the ticket's status locally
+      ticket.status = newStatus;
 
       // Backend sync
       this.ticketService.updateTicketStatus(ticket.id, { status: newStatus }).subscribe({
@@ -127,11 +139,29 @@ export class BoardComponent implements OnInit {
         error: (error) => {
           // Rollback on failure
           console.error('Failed to update ticket status:', error);
-          transferArrayItem(currentArray, previousArray, event.currentIndex, event.previousIndex);
-          this.errorMessage = 'Failed to move ticket. Please try again.';
+          
+          // Revert the status
+          ticket.status = oldStatus;
+          
+          // Move back to original position
+          const currentIndex = currentArray.findIndex(t => t.id === ticket.id);
+          if (currentIndex !== -1) {
+            transferArrayItem(
+              currentArray, 
+              previousArray, 
+              currentIndex, 
+              event.previousIndex
+            );
+          }
+          
+          this.errorMessage = `Failed to move ticket: ${error.message}`;
           
           // Clear error after 3 seconds
-          setTimeout(() => this.errorMessage = '', 3000);
+          setTimeout(() => {
+            if (this.errorMessage.includes('Failed to move ticket')) {
+              this.errorMessage = '';
+            }
+          }, 3000);
         }
       });
     }
@@ -171,18 +201,20 @@ export class BoardComponent implements OnInit {
             this.closeModal();
           },
           error: (error) => {
-            this.errorMessage = 'Failed to update ticket. Please try again.';
+            this.errorMessage = `Failed to update ticket: ${error.message}`;
             console.error('Update error:', error);
           }
         });
     } else {
+      // Creates new ticket
       this.ticketService.createTicket(ticketData as CreateTicketDto).subscribe({
-        next: () => {
+        next: (createdTicket) => {
+          console.log('Ticket created successfully:', createdTicket);
           this.loadTickets();
           this.closeModal();
         },
         error: (error) => {
-          this.errorMessage = 'Failed to create ticket. Please try again.';
+          this.errorMessage = `Failed to create ticket: ${error.message}`;
           console.error('Create error:', error);
         }
       });
@@ -208,6 +240,7 @@ export class BoardComponent implements OnInit {
       default: return status.charAt(0).toUpperCase() + status.slice(1);
     }
   }
+
   getCategoryLabel(category: TicketCategory | 'All'): string {
     if (category === 'All') return 'All Categories';
     return getCategoryDisplayName(category);
